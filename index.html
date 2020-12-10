@@ -15,181 +15,25 @@
             </tbody>
         </table>
     </div>
+    <h2>Tablero Enemigo</h2>
+    <div>
+        <table>
+            <tbody id="tablero-enemigo">
+            </tbody>
+        </table>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.0/axios.min.js"
         integrity="sha512-DZqqY3PiOvTP9HkjIWgjO6ouCbq+dxqWoJZ/Q+zPYNHmlnI2dQnbJ5bxAHpAMw+LXRm4D72EIRXzvcHQtE8/VQ=="
         crossorigin="anonymous"></script>
     <script>
-        function sortWords(words) {
-                return words.sort((a, b) => (a.value.length > b.value.length ? -1 : 1));
-            }
-
-            function placeWords(words, maxCols, maxRows, limit) {
-                words = sortWords(words);
-                let original = [...words];
-                let queue = [...original];
-                let placed = new Array();
-                let j = 0;
-                let i = 0;
-                while (queue.length > 0) {
-                    if (i === words.length * 2 - 1) {
-                        i = -1;
-                        let initial = original[0];
-                        original.splice(0, 1);
-                        original.push(initial);
-                        queue = [...original];
-                        placed = new Array();
-                    } else {
-                        let currWord = queue.shift();
-                        let prevLength = placed.length;
-                        placeWord(currWord, placed, maxCols, maxRows);
-                        if (placed.length === prevLength) {
-                            queue.push(currWord);
-                        }
-                    }
-                    i++;
-                    j++;
-                    if (limit) {
-                        if (j > limit) throw new Error("No pudo formarse un crucigrama");
-                    }
-                }
-                return placed;
-            }
-
-            function placeWord(currWord, placed, maxCols, maxRows) {
-                if (placed.length === 0) {
-                    placed.push({
-                        ...currWord,
-                        x0: 0,
-                        y0: 0,
-                        xf: currWord.value.length,
-                        yf: 0,
-                        direction: "across",
-                    });
-                } else {
-                    let isPlaced = false;
-                    let { xMin, xMax, yMin, yMax } = getGrid(placed);
-                    placed.forEach((word) => {
-                        if (!isPlaced) {
-                            let value = word.value;
-                            for (let i = 0; i < currWord.value.length; i++) {
-                                let index = value.indexOf(currWord.value[i]);
-                                if (index !== -1) {
-                                    let direction = word.direction === "across" ? "vertical" : "across";
-                                    let x0 = direction === "vertical" ? word.x0 + index : word.x0 - i;
-                                    let y0 =
-                                        direction === "vertical" ? word.y0 - i : word.x0 + i + word.y0;
-                                    let xf = direction === "across" ? x0 + currWord.value.length : x0;
-                                    let yf = direction === "vertical" ? y0 + currWord.value.length : y0;
-                                    if (fitsInGrid(x0, y0, xf, yf, direction, xMin, yMin, xMax, yMax, maxCols, maxRows) && placeable(x0, y0, xf, yf, direction, placed, currWord)) {
-                                        placed.push({
-                                            ...currWord,
-                                            x0,
-                                            y0,
-                                            xf,
-                                            yf,
-                                            direction,
-                                        });
-                                        isPlaced = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                return placed;
-            }
-
-            function fitsInGrid(x0, y0, xf, yf, direction, xMin, yMin, xMax, yMax, maxCols, maxRows) {
-                if (direction === "across") {
-                    return xf - xMin <= maxCols && xMax - x0 <= maxCols;
-                } else {
-                    return yf - yMin <= maxRows && yMax - y0 <= maxRows;
-                }
-            }
-
-            function placeable(x0, y0, xf, yf, direction, placed, currWord) {
-                if (direction === "across") {
-                    let placedWords = placed.find((word) =>
-                        word.direction === "across"
-                            ? word.x0 >= x0 &&
-                            word.xf <= xf &&
-                            (word.y0 === y0 || word.y0 === y0 + 1 || word.y0 === y0 - 1)
-                            : word.y0 >= x0 || word.y0 <= xf
-                                ? word.value[y0 - word.y0] !== currWord.value[word.x0 - x0]
-                                : false
-                    );
-                    return placedWords === undefined;
-                } else {
-                    let placedWords = placed.find((word) =>
-                        word.direction === "across"
-                            ? word.x0 <= x0 && word.xf >= x0 ?
-                                word.value[x0 - word.x0] !== currWord.value[word.y0 - y0]
-                                : false
-                            : (word.x0 === x0 || word.x0 === x0 - 1 || word.x0 === x0 + 1)
-                    );
-                    return placedWords === undefined;
-                }
-            }
-
-            function getGrid(words) {
-                let sortedY = words.sort((a, b) => a.y0 < b.y0 ? -1 : 1)
-                let yMin = sortedY[0].y0;
-                let yMax = sortedY[sortedY.length - 1].y0;
-                let yDiff = Math.abs(yMin) - 0;
-                let sortedX = words.sort((a, b) => a.x0 < b.x0 ? -1 : 1);
-                let xMin = sortedX[0].x0;
-                let xMax = sortedX[sortedX.length - 1].x0
-                let xDiff = Math.abs(xMin) - 0;
-                let rows = yMax - yMin;
-                let cols = xMax - xMin;
-                return { yMin, yMax, yDiff, xMin, xMax, xDiff, rows, cols };
-            }
-
-            function formatMatrix(words) {
-                const { yDiff, xDiff } = getGrid(words);
-                words.forEach(word => {
-                    word.y0 += yDiff;
-                    word.x0 += xDiff;
-                });
-                return words;
-            }
-
-            function placeWordsDefault(words, maxRows, maxCols) {
-                words = sortWords(words);
-                let max = words[0].value.length;
-                if (max < maxCols) {
-                    let vertical = maxCols - max;
-                    let start = -1;
-                    if (vertical > words.length / 2) vertical = parseInt(words.length / 2);
-                    return words.map((word, index) => {
-                        if (vertical > 0) {
-                            vertical--;
-                            return ({ ...word, x0: maxCols - (maxCols - vertical), xf: maxCols - (maxCols - vertical), y0: 0, yf: word.value.length - 1, direction: "vertical" });
-                        } else if (start === -1) start = index + 1;
-                        return ({ ...word, x0: start, xf: start + word.value.length - 1, y0: index, yf: index, direction: "across" });
-                    });
-                }
-                return words.map((word, index) => ({ ...word, x0: 0, xf: word.value.length - 1, y0: index, yf: index, direction: "across" }));
-            }
-
-            function generateCrossword(words, maxCols, maxRows, limit) {
-                try {
-                    let map = placeWords(words, maxCols, maxRows, limit);
-                    return formatMatrix(map);
-                } catch (e) {
-                    return placeWordsDefault(words, maxRows, maxCols);
-                }
-            }
-    </script>
-    <script>
-        const base_url = "http://localhost:5000";
+        const base_url = "http://db8a916ffbc0.ngrok.io";
         
         let room = null;
         let socket = null;
         let tablero = null;
         let matriz = null;
+        let matrizEnemiga = null;
 
         function getRoom() {
             axios.get(`${base_url}/room`).then(res => {
@@ -221,15 +65,17 @@
         }
 
         function disparar() {
-            const x = Math.ceil(Math.random() * 10);
-            const y = Math.ceil(Math.random() * 10);
+            const x = Math.floor(Math.random() * 10);
+            const y = Math.floor(Math.random() * 10);
             socket.emit("disparo", {x,y});
         }
 
         function registerEventos() {
             tablero = generarTablero();
             matriz = generarMatriz(tablero);
+            matrizEnemiga = generarMatriz();
             document.getElementById("tablero").innerHTML = renderMatriz(matriz);
+            document.getElementById("tablero-enemigo").innerHTML = renderMatriz(matrizEnemiga);
             socket.emit("start", tablero);
 
             socket.on("turno", () => {
@@ -238,15 +84,23 @@
             });
 
             socket.on("exito", data => {
+                const { x,y } = data;
+                matrizEnemiga[y][x] = "X";
+                document.getElementById("tablero-enemigo").innerHTML = renderMatriz(matrizEnemiga);
                 setMessage("Éxito");
             });
 
             socket.on("fracaso", data => {
+                const { x, y } = data;
+                matrizEnemiga[y][x] = "-";
+                document.getElementById("tablero-enemigo").innerHTML = renderMatriz(matrizEnemiga)
                 setMessage("Has fallado el tiro");
             });
 
             socket.on("impacto", data => {
                 const { x, y } = data;
+                matriz[y][x] = "-";
+                document.getElementById("tablero").innerHTML = renderMatriz(matriz);
                 setMessage(`Has sido impactado en ${x}, ${y}.`);
             })
 
@@ -267,11 +121,18 @@
         }
 
         function generarMatriz(tablero) {
-            const matriz = new Array(10).fill(new Array(10).fill("-"));
+            const matriz = [];
+            for(let i = 0; i < 10; i++) {
+                matriz.push([]);
+                for(let j = 0; j < 10; j++) {
+                    matriz[i][j] = tablero ? "-" : "?";
+                }
+            }
+            if(!tablero) return matriz;
             Object.keys(tablero).forEach(barco => {
                 const { yi, yf, xi, xf } = tablero[barco];
-                for (let i = xi; i <= xf; i++) {
-                    for (let j = yi; j <= yf; j++) {
+                for(let i = yi; i <= yf; i++) {
+                    for(let j = xi; j <= xf; j++) {
                         matriz[i][j] = "+";
                     }
                 }
@@ -290,57 +151,16 @@
             });
             return placeShip;
         }
-
-        function generarTablero() {
-            const words = [
-                {
-                    value: "aaaaa",
-                },
-                {
-                    value: "aaaa"
-                },
-                {
-                    value: "aaa",
-                },
-                {
-                    value: "aaa",
-                },
-                {
-                    value: "aa"
-                }
-            ];
-            let tablero = generateCrossword(words, 10,10, 10000);
-            tablero = tablero.map(barco => ({
-                xi: barco.x0,
-                xf: barco.xf,
-                yi: barco.y0,
-                yf: barco.yf,
-                value: barco.value,
-                direction: barco.direction
-            }));
-            let tableroObject = {};
-            tablero.forEach(barco => {
-                switch(barco.value.length) {
-                    case 5:
-                        tableroObject.portaaviones = barco;
-                        break;
-                    case 4:
-                        tableroObject.acorazado = barco;
-                        break;
-                    case 3:
-                        if(tableroObject.destructor) {
-                            tableroObject.submarino = barco;
-                        } else {
-                            tableroObject.destructor = barco;
-                        }
-                        break;
-                    case 2:
-                        tableroObject.patrullero = barco;
-                        break;
-                }
-            })
-            return tableroObject;
-        }
+    function generarTablero() {
+        const tableros = [
+            { "portaaviones": { "xi": 2, "xf": 6, "yi": 8, "yf": 8 }, "acorazado": { "xi": 0, "xf": 3, "yi": 2, "yf": 2 }, "submarino": { "xi": 4, "xf": 4, "yi": 5, "yf": 7 }, "patrullero": { "xi": 0, "xf": 1, "yi": 8, "yf": 8 }, "destructor": { "xi": 9, "xf": 9, "yi": 7, "yf": 9 } },
+            { "portaaviones": { "xi": 9, "xf": 9, "yi": 1, "yf": 5 }, "acorazado": { "xi": 5, "xf": 5, "yi": 1, "yf": 4 }, "submarino": { "xi": 2, "xf": 2, "yi": 2, "yf": 4 }, "patrullero": { "xi": 1, "xf": 2, "yi": 4, "yf": 4 }, "destructor": { "xi": 4, "xf": 6, "yi": 1, "yf": 1 } },
+            { "portaaviones": { "xi": 3, "xf": 3, "yi": 5, "yf": 9 }, "acorazado": { "xi": 6, "xf": 9, "yi": 5, "yf": 5 }, "submarino": { "xi": 6, "xf": 8, "yi": 7, "yf": 7 }, "patrullero": { "xi": 1, "xf": 2, "yi": 5, "yf": 5 }, "destructor": { "xi": 8, "xf": 8, "yi": 6, "yf": 8 } },
+            { "portaaviones": { "xi": 3, "xf": 7, "yi": 4, "yf": 4 }, "acorazado": { "xi": 7, "xf": 7, "yi": 6, "yf": 9 }, "submarino": { "xi": 8, "xf": 8, "yi": 3, "yf": 5 }, "patrullero": { "xi": 0, "xf": 0, "yi": 6, "yf": 7 }, "destructor": { "xi": 2, "xf": 4, "yi": 9, "yf": 9 } }
+        ];
+        const index = Math.floor(Math.random() * tableros.length);
+        return tableros[index];
+    }
 
     </script>
 </body>

@@ -5,6 +5,6 @@ app.get("/*", (req, res) => {
   res.sendFile(`${__dirname}/index.html`);
 });
 
-app.listen(5500, () => {
+app.listen(3001, () => {
   console.log("running");
 });
