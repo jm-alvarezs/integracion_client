@@ -27,13 +27,16 @@
         integrity="sha512-DZqqY3PiOvTP9HkjIWgjO6ouCbq+dxqWoJZ/Q+zPYNHmlnI2dQnbJ5bxAHpAMw+LXRm4D72EIRXzvcHQtE8/VQ=="
         crossorigin="anonymous"></script>
     <script>
-        const base_url = "http://db8a916ffbc0.ngrok.io";
+        //link de back de otro back (nuestro front con otro back)
+        //juego solo: http://localhost:5500
+        const base_url = "http://localhost:5500";
         
         let room = null;
         let socket = null;
         let tablero = null;
         let matriz = null;
         let matrizEnemiga = null;
+        let disparados = new Set();
 
         function getRoom() {
             axios.get(`${base_url}/room`).then(res => {
@@ -65,9 +68,17 @@
         }
 
         function disparar() {
-            const x = Math.floor(Math.random() * 10);
-            const y = Math.floor(Math.random() * 10);
-            socket.emit("disparo", {x,y});
+            let x = Math.floor(Math.random() * 10);
+            let y = Math.floor(Math.random() * 10);
+            while(disparados.has({ x,y })) {
+                x = Math.floor(Math.random() * 10);
+                y = Math.floor(Math.random() * 10);
+            }
+            disparados.add({ x, y});
+            const segundos = 2;
+            setTimeout(() => {
+                socket.emit("disparo", { x, y });
+            }, segundos * 1000);
         }
 
         function registerEventos() {
