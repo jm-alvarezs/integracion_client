@@ -3,24 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./index.css" type="text/css" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+        integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous" />
     <title>Battleship</title>
 </head>
 <body>
-    <h1>Battleship</h1>
-    <h2 id="message"></h2>
-    <button id="button" onclick="getRoom()">Jugar</button>
-    <div>
-        <table>
-            <tbody id="tablero">
-            </tbody>
-        </table>
-    </div>
-    <h2>Tablero Enemigo</h2>
-    <div>
-        <table>
-            <tbody id="tablero-enemigo">
-            </tbody>
-        </table>
+    <div class="container">
+        <div class="w-100">
+            <h1>Battleship</h1>
+            <h2 id="message"></h2>
+            <button id="button" onclick="getRoom()">Jugar</button>
+        </div>
+        <div class="w-50">
+            <h2>Tu Tablero</h2>
+            <table>
+                <tbody id="tablero">
+                </tbody>
+            </table>
+        </div>
+        <div class="w-50">
+            <h2>Tablero Enemigo</h2>
+            <table>
+                <tbody id="tablero-enemigo">
+                </tbody>
+            </table>
+        </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.0/axios.min.js"
@@ -60,7 +68,7 @@
             for(let i = 0; i < matriz.length; i++) {
                 result += "<tr>";
                 for(let j = 0; j < matriz[i].length; j++) {
-                    result += `<td>${matriz[i][j]}</td>`;
+                    result += `<td>${matriz[i][j] === "+" ? '<i class="fas fa-ship"></i>' : (matriz[i][j] === "X" ? '<i class="fas fa-skull"></i>' : '<i class="fas fa-water"></i>')}</td>`;
                 }
                 result += "</tr>";
             }
